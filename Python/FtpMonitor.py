@@ -46,19 +46,25 @@ class UploadEventHandler(FileSystemEventHandler):
 
     def on_created(self, event):
         """Handle file creation events."""
-        if not event.is_directory:  
+        if not event.is_directory:
             src_path = event.src_path
-            dest_path = os.path.join(self.dest_dir, os.path.basename(src_path))
+            file_name = os.path.basename(src_path)
+
             try:
+
+                username = file_name.split('_')[0]
+
+                user_dir = os.path.join(self.dest_dir, username)
+                if not os.path.exists(user_dir):
+                    os.makedirs(user_dir)
+                    print(f"Directory created: {user_dir}")
+
+                dest_path = os.path.join(user_dir, file_name)
                 shutil.copy(src_path, dest_path)
                 print(f"File copied from {src_path} to {dest_path}")
-                
-                if self.mqtt_handler and self.topic:
-                    message = f"put|{os.path.basename(src_path)}."
-                    self.mqtt_handler.send_message(self.topic, message)
-                    print(f"MQTT message sent: {message}")
-                    
+
                 os.remove(src_path)
-                print(f"File deleted from source: {src_path}")                
+                print(f"File deleted from source: {src_path}")
+        
             except Exception as e:
-                print(f"Failed to copy {src_path} to {dest_path}: {e}")
+                print(f"Failed to process file {src_path}: {e}")
