@@ -1,5 +1,6 @@
 import os
 import shutil
+import time
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
@@ -58,7 +59,7 @@ class UploadEventHandler(FileSystemEventHandler):
                 if not os.path.exists(user_dir):
                     os.makedirs(user_dir)
                     print(f"Directory created: {user_dir}")
-
+                time.sleep(20)
                 dest_path = os.path.join(user_dir, file_name)
                 shutil.copy(src_path, dest_path)
                 print(f"File copied from {src_path} to {dest_path}")

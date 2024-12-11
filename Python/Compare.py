@@ -37,9 +37,27 @@ class Compare:
     def find_best_model(self):
         """Fetch and identify the best model."""
         models = self.db_handler.get_newest_models()
-        if len(models) < 2:
-            print("Not enough models to compare.")
+        if len(models) == 0:
+            print("No Models to compare or use")
             return
+        if len(models) < 2:
+            print("Not enough models to compare. so just uses newest model")
+            Newestmodel = models[0]
+            modelpath = os.path.join(self.model_dir, Newestmodel['username'], Newestmodel['filename'])
+            print(f"model from {modelpath}")
+            destPath = os.path.join(self.dest_dir,self.Bestagentname)
+            print(f"will be copied to {destPath}")
+            if not os.path.isfile(modelpath):
+                time.sleep(20)
+            if os.path.isfile(modelpath):
+                shutil.copy(modelpath,destPath)
+                print("file has been copied")
+                return
+            else:
+                print("File is still not available after waiting.")
+                return
+            
+            
 
         print("Determining the best model...")
 
@@ -54,14 +72,22 @@ class Compare:
                     print(f"model from {modelpath}")
                     destPath = os.path.join(self.dest_dir,self.Bestagentname)
                     print(f"will be copied to {destPath}")
-                    shutil.copy(modelpath,destPath)
-                    print("file has been copied")
-                    usernames = self.db_handler.get_all_users_except(best_model['username'])
-                    for user in usernames:
-                        payload=f"NewModel|{self.Bestagentname}"
-                        topic=f"{user}/Commands"
-                        self.mqtt_handler.send_message(topic,payload)
-                    self.bestmodel = best_model
+                    if not os.path.isfile(modelpath):
+                        time.sleep(20)
+                    if os.path.isfile(modelpath):
+                        shutil.copy(modelpath,destPath)
+                        print("file has been copied")
+                        usernames = self.db_handler.get_all_users_except(best_model['username'])
+                        for user in usernames:
+                            payload=f"NewModel|{self.Bestagentname}"
+                            topic=f"{user}/Commands"
+                            self.mqtt_handler.send_message(topic,payload)
+                        self.bestmodel = best_model
+                        return
+                    else:
+                        print("File is still not available after waiting.")
+                        return
+                    
                 except Exception as e:
                     print(f"Failed to process Model {e}")
 
