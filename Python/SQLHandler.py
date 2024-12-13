@@ -1,5 +1,6 @@
 import mysql.connector
 from mysql.connector import errorcode
+import logging
 
 class SQLHandler:
     def __init__(self, host, user, password, database):
@@ -29,15 +30,15 @@ class SQLHandler:
                 database=self.database
             )
             self.cursor = self.connection.cursor()
-            print("Connected to the database successfully.")
+            logging.info("Connected to the database successfully.")
             self.setup_schema()
         except mysql.connector.Error as err:
             if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
-                print("Invalid username or password.")
+                logging.info("Invalid username or password.")
             elif err.errno == errorcode.ER_BAD_DB_ERROR:
-                print(f"Database '{self.database}' does not exist.")
+                logging.info(f"Database '{self.database}' does not exist.")
             else:
-                print(err)
+                logging.error(err)
 
     def setup_schema(self):
         """Create the necessary tables if they do not exist."""
@@ -67,9 +68,9 @@ class SQLHandler:
             self.cursor.execute(create_table_query)
             self.connection.commit()
 
-            print("Database schema is set up.")
+            logging.info("Database schema is set up.")
         except mysql.connector.Error as err:
-            print(f"Error creating schema: {err}")
+            logging.error(f"Error creating schema: {err}")
 
     def InsertModel(self, filename, rewardMean, rewardStd, username, modelScore):
         """Insert a new Model record into the database using the username to find the USERID."""
@@ -80,7 +81,7 @@ class SQLHandler:
             result = self.cursor.fetchone()
             
             if result is None:
-                print(f"Error: No user found with username '{username}'.")
+                logging.info(f"Error: No user found with username '{username}'.")
                 return
             
             userid = result[0]  # Extract USERID from the query result
@@ -92,9 +93,9 @@ class SQLHandler:
             """
             self.cursor.execute(insert_query, (filename, rewardMean, rewardStd, userid, modelScore,))
             self.connection.commit()
-            print(f"Inserted new file '{filename}' into the database for user '{username}'.")
+            logging.info(f"Inserted new file '{filename}' into the database for user '{username}'.")
         except mysql.connector.Error as err:
-            print(f"Error inserting data: {err}")
+            logging.error(f"Error inserting data: {err}")
             raise
 
     def getModel(self, filename):
@@ -104,13 +105,13 @@ class SQLHandler:
             self.cursor.execute(select_query, (filename,))
             result = self.cursor.fetchall()
             if result:
-                print(f"Found Model: {result}")
+                logging.info(f"Found Model: {result}")
                 return result
             else:
-                print(f"Model '{filename}' not found in the database.")
+                logging.info(f"Model '{filename}' not found in the database.")
                 return None
         except mysql.connector.Error as err:
-            print(f"Error fetching data: {err}")
+            logging.error(f"Error fetching data: {err}")
             return None
         
     def get_newest_models(self):
@@ -156,10 +157,10 @@ class SQLHandler:
                 }
                 for row in results
             ]   
-            print("got all the newest models ")
+            logging.info("got all the newest models ")
             return newest_models
         except mysql.connector.Error as err:
-            print(f"Error fetching newest models: {err}")
+            logging.error(f"Error fetching newest models: {err}")
             return []
         
     def get_all_users_except(self, excluded_username):
@@ -182,10 +183,10 @@ class SQLHandler:
             # Extract usernames from the result set
             usernames = [row[0] for row in results]
 
-            print(f"Retrieved all users except {excluded_username}: {usernames}")
+            logging.info(f"Retrieved all users except {excluded_username}: {usernames}")
             return usernames
         except mysql.connector.Error as err:
-            print(f"Error fetching users excluding {excluded_username}: {err}")
+            logging.error(f"Error fetching users excluding {excluded_username}: {err}")
             return []
 
 
@@ -196,7 +197,7 @@ class SQLHandler:
             self.cursor.execute(find_user_query, (username,))
             result = self.cursor.fetchone()
             if result is None:
-                print(f"No user found, will insert user with username: '{username}'.")
+                logging.info(f"No user found, will insert user with username: '{username}'.")
                 insert_query = """
                 INSERT INTO Users (Username) 
                 VALUES (%s)
@@ -204,9 +205,9 @@ class SQLHandler:
                 self.cursor.execute(insert_query, (username,))
                 self.connection.commit()
             else:
-                print(f"Error: User is already in database with username: {username}.")
+                logging.info(f"Error: User is already in database with username: {username}.")
         except mysql.connector.Error as err:
-            print(f"Error fetching data: {err}")
+            logging.error(f"Error fetching data: {err}")
             return None
         
     def getUser(self,username):
@@ -215,13 +216,13 @@ class SQLHandler:
             self.cursor.execute(find_user_query, (username,))
             result = self.cursor.fetchone()
             if result:
-                print(f"Found user: {username}")
+                logging.info(f"Found user: {username}")
                 return result
             else:
-                print(f"user '{username}' not found in the database.")
+                logging.info(f"user '{username}' not found in the database.")
                 return None
         except mysql.connector.Error as err:
-            print(f"Error fetching data: {err}")
+            logging.error(f"Error fetching data: {err}")
             return None
     def close(self):
         """Close the database connection."""
@@ -229,7 +230,7 @@ class SQLHandler:
             self.cursor.close()
         if self.connection:
             self.connection.close()
-        print("Connection closed.")
+        logging.info("Connection closed.")
 
 if __name__ == "__main__":
     

@@ -3,6 +3,7 @@ import shutil
 import time
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
+import logging
 
 class FtpHandler:
     def __init__(self, watch_dir, dest_dir, mqtt_handler=None, topic=None):
@@ -24,13 +25,13 @@ class FtpHandler:
         event_handler = UploadEventHandler(self.dest_dir, self.mqtt_handler, self.topic)
         self.observer.schedule(event_handler, self.watch_dir, recursive=False)
         self.observer.start()
-        print(f"FtpHandler started. Watching directory: {self.watch_dir}")
+        logging.info(f"FtpHandler started. Watching directory: {self.watch_dir}")
 
     def stop(self):
         """Stop monitoring the directory."""
         self.observer.stop()
         self.observer.join()
-        print("FtpHandler stopped.")
+        logging.info("FtpHandler stopped.")
 
 
 class UploadEventHandler(FileSystemEventHandler):
@@ -58,14 +59,14 @@ class UploadEventHandler(FileSystemEventHandler):
                 user_dir = os.path.join(self.dest_dir, username)
                 if not os.path.exists(user_dir):
                     os.makedirs(user_dir)
-                    print(f"Directory created: {user_dir}")
+                    logging.info(f"Directory created: {user_dir}")
                 time.sleep(20)
                 dest_path = os.path.join(user_dir, file_name)
                 shutil.copy(src_path, dest_path)
-                print(f"File copied from {src_path} to {dest_path}")
+                logging.info(f"File copied from {src_path} to {dest_path}")
 
                 os.remove(src_path)
-                print(f"File deleted from source: {src_path}")
+                logging.info(f"File deleted from source: {src_path}")
         
             except Exception as e:
-                print(f"Failed to process file {src_path}: {e}")
+                logging.error(f"Failed to process file {src_path}: {e}")

@@ -2,6 +2,7 @@ import paho.mqtt.client as mqtt
 import ssl
 import dotenv
 import os
+import logging
 
 class MQTTHandler:
     def __init__(self, broker, port, topics=None, username=None, password=None, db_handler=None):
@@ -36,7 +37,7 @@ class MQTTHandler:
         self.command_dispatcher = {
         "TestResultat": self.handle_testResult,
         "LoopStarted": self.handle_started,
-        "LoopStoped": self.handle_stopped,
+        "LoopStopped": self.handle_stopped,
         "NewUser": self.handle_NewUser,
         # Add more commands here if necessary
         }
@@ -47,21 +48,22 @@ class MQTTHandler:
         """Start the MQTT handler by subscribing to topics."""
         for topic in self.topics:
             self.client.subscribe(topic)
-            print(f"Subscribed to topic: {topic}")
-        print("MQTTHandler started and listening for messages.")
+            logging.info(f"Subscribed to topic: {topic}")
+        logging.info("MQTTHandler started and listening for messages.")
 
     def stop(self):
         """Stop the MQTT handler and disconnect from the broker."""
         self.client.loop_stop() 
         self.client.disconnect()
-        print("MQTTHandler stopped and disconnected from the broker.")
+        logging.info("MQTTHandler stopped and disconnected from the broker.")
 
     def on_connect(self, client, userdata, flags, rc):
         """Callback function for when the client connects to the broker."""
         if rc == 0:
-            print("Connected successfully")
+            logging.info("Connected successfully")
+            self.start()
         else:
-            print(f"Connection failed with code {rc}")
+            logging.error(f"Connection failed with code {rc}")
 
     def send_message(self, topic, message):
         """Publish a message to a specific topic."""
@@ -71,18 +73,18 @@ class MQTTHandler:
         """Callback for when a message is received."""
         message = msg.payload.decode('utf-8')
         topic = msg.topic
-        print(topic)
+        logging.info(topic)
         username = self.extract_username(topic)
-        print(f"Received message on topic {topic}: {message}")
+        logging.info(f"Received message on topic {topic}: {message}")
         self.handle_message(message, username)
 
     def on_publish(self, client, userdata, mid):
         """Callback for when a message is successfully published."""
-        print(f"Message published with mid: {mid}")
+        logging.info(f"Message published with mid: {mid}")
 
     def on_subscribe(self, client, userdata, mid, granted_qos):
         """Callback for when a subscription is confirmed."""
-        print(f"Subscribed to topic with mid: {mid} with QoS {granted_qos}")
+        logging.info(f"Subscribed to topic with mid: {mid} with QoS {granted_qos}")
 
     def extract_username(self, topic):
         """
@@ -98,10 +100,10 @@ class MQTTHandler:
             if len(parts) >= 2 and parts[0] == 'Server':
                 return parts[1]  # The username is the second part
             else:
-                print("Invalid topic structure.")
+                logging.error("Invalid topic structure.")
                 return None
         except Exception as e:
-            print(f"Error parsing topic: {e}")
+            logging.error(f"Error parsing topic: {e}")
             return None
 
     def handle_message(self, message, username):
@@ -114,7 +116,7 @@ class MQTTHandler:
             else:
                 handler(command, username)
         except ValueError as e:
-            print(f"Error processing message: {e}")
+            logging.error(f"Error processing message: {e}")
 
     def parse_message(self, message):
         """Parse a message into command and data."""
@@ -127,7 +129,7 @@ class MQTTHandler:
 
     def handle_testResult(self, data, username):
         """Handle the 'TestResult' command and compute ModelScore."""
-        print(f"Processing test for user {username}, with data {data}")
+        logging.info(f"Processing test for user {username}, with data {data}")
         try:
             dotenvFile = dotenv.find_dotenv()
             dotenv.load_dotenv(dotenvFile, override=True)
@@ -145,11 +147,11 @@ class MQTTHandler:
         
             # Insert data into the database
             self.db_handler.InsertModel(FileName, reward_mean, reward_std, username ,model_score)
-            print(f"Inserted model with score {model_score} for user {username}.")
+            logging.info(f"Inserted model with score {model_score} for user {username}.")
         except ValueError:
             raise ValueError("Invalid message format. Expected 'data|data|data..'.")
         except Exception as e:
-            print(f"An error occurred: {e}")
+            logging.error(f"An error occurred: {e}")
 
     def calculate_model_score(self, reward_mean, reward_std, mean_weight=1.0, std_weight=1.0):
         """
@@ -172,17 +174,17 @@ class MQTTHandler:
     
     def handle_started(self, data, username):
         """Handle the 'started training' command."""
-        print(f"Processing started for user {username}, with data {data}")
+        logging.info(f"Processing started for user {username}, with data {data}")
 
     def handle_stopped(self, data, username):
         """Handle the 'Stopped training' command."""
-        print(f"Processing stopped for user {username}, with data {data}")
+        logging.info(f"Processing stopped for user {username}, with data {data}")
 
     def handle_NewUser(self, data, username):
         """Handle the 'NewUser' command."""
-        print(f"processing newUser with username {data}")
+        logging.info(f"processing newUser with username {data}")
         self.db_handler.InsertUser(data)
-        print(f"inserted user with username {data}")
+        logging.info(f"inserted user with username {data}")
         dotenvFile = dotenv.find_dotenv()
         dotenv.load_dotenv(dotenvFile, override=True)
         seed= os.getenv("SEED")
@@ -196,4 +198,4 @@ class MQTTHandler:
 
     def handle_unknown(self, command, username):
         """Handle unknown commands."""
-        print(f"Unknown command: {command}, from user {username}")
+        logging.info(f"Unknown command: {command}, from user {username}")
